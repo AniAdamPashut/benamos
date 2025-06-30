@@ -2,7 +2,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <limine.h>
-#include "uart.h"
+
+#include "init.h"
+#include "printf.h"
 
 
 // Set the base revision to 3, this is recommended as this is the latest
@@ -48,14 +50,10 @@ void kmain(void) {
         hcf();
     }
 
-    // Ensure we got a framebuffer.
-    if (framebuffer_request.response == NULL
-     || framebuffer_request.response->framebuffer_count < 1) {
-        hcf();
-    }
+    init();
 
     const char *msg = "Hello, World!\n";
-    serial_write_string(msg);
+    printf("%s", msg);
 
     // We're done, just hang...
     hcf();

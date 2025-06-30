@@ -2,6 +2,7 @@
 
 #include "benami.h"
 #include "printf.h"
+#include "serial.h"
 
 #define COM1 0x3F8
 
@@ -13,8 +14,8 @@ void outb(u16 port, u8 value) {
     );
 }
 
-uint8_t inb(uint16_t port) {
-    uint8_t ret;
+u8 inb(u16 port) {
+    u8 ret;
     __asm__ volatile (
         "inb %1, %0"
         : "=a"(ret)

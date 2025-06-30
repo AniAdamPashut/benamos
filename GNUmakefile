@@ -5,9 +5,6 @@ MAKEFLAGS += -rR
 # Default user QEMU flags. These are appended to the QEMU command calls.
 QEMUFLAGS := -m 2G \
 			 -serial stdio \
-			# -S -s \
-			#  -d cpu,int \
-			#  -no-reboot \
 
 override IMAGE_NAME := template
 

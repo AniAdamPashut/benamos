@@ -48,8 +48,6 @@ void kmain(void) {
     const char *msg = "Hello, World!\n";
     printf("%s", msg);
 
-    __asm__ volatile("int3");
-
     // We're done, just hang...
     hcf();
 }

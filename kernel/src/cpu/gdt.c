@@ -1,4 +1,5 @@
 #include "cpu/gdt.h"
+#include "utilities.h"
 
 static volatile gdt global_descriptor_table = {0}; 
 
@@ -35,44 +36,9 @@ segment_descriptor create_user_data_segment() {
     return create_segment(0, 0xFFFFF, 0b11110010, 0x2);
 }
 
-void set_gdt(u16 limit, u64 table) {
-    static struct __attribute__((packed)) {
-        u16 limit;
-        u64 base; // using 64-bit to be safe on x86_64
-    } gdtr;
+extern void set_gdt(u16 limit, u64 table);
 
-    gdtr.limit = limit;
-    gdtr.base = table;
-
-    __asm__ volatile (
-        "lgdt %0"
-        :
-        : "m"(gdtr)
-        : "memory"
-    );
-}
-
-__attribute__((naked)) void reload_segments(void) {
-    __asm__ __volatile__ (
-        "leaq 1f(%%rip), %%rax\n\t"
-        "pushq $0x08\n\t"      // Code segment selector
-        "pushq %%rax\n\t"
-        "retfq\n\t"            // Far return to reload CS
-        "1:\n\t"
-        
-        "movw $0x10, %%ax\n\t" // Data segment selector
-        "movw %%ax, %%ds\n\t"
-        "movw %%ax, %%es\n\t"
-        "movw %%ax, %%fs\n\t"
-        "movw %%ax, %%gs\n\t"
-        "movw %%ax, %%ss\n\t"
-        
-        "ret\n\t"
-        :
-        :
-        : "rax"
-    );
-}
+extern void reload_segments(void);
 
 void initialize_gdt() {
     global_descriptor_table.length = 1;
@@ -81,7 +47,7 @@ void initialize_gdt() {
     segment_descriptor user_code_descriptor = create_user_code_segment();
     segment_descriptor user_data_descriptor = create_user_data_segment();
 
-    __asm__ ("cli");
+    clear_interrupts();
     
     global_descriptor_table.entries[global_descriptor_table.length] = code_descriptor;
     global_descriptor_table.length++;
@@ -107,5 +73,5 @@ void initialize_gdt() {
     
     reload_segments();
 
-    __asm__ ("sti");
+    set_interrupts();
 }

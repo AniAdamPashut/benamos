@@ -175,23 +175,7 @@ void load_custom_interrupts() {
     REGISTER_HANDLER(breakpoint, 0x03);
 }
 
-
-void load_idt() {
-    static struct __attribute__((packed)) {
-        u16 limit;
-        u64 base; // using 64-bit to be safe on x86_64
-    } idtr;
-
-    idtr.limit = (sizeof(interrupt_descriptor_t) * 256) - 1;
-    idtr.base = (u64)interrupt_table.entries;
-
-    __asm__ volatile (
-        "lidt %0"
-        :
-        : "m"(idtr)
-        : "memory"
-    );
-}
+extern void load_idt();
 
 void initialize_idt() { 
     set_interrupts_in_table();

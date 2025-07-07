@@ -1,17 +1,13 @@
 global outb
-global inb
-
 outb:
-    mov dx, di
-    mov rax, rsi
-    and rax, 0xFF
-
+    mov dx, di        ; port = low 16 bits of RDI
+    mov al, sil       ; value = low 8 bits of RSI
     out dx, al
     ret
 
-
+global inb
 inb:
-    mov ax, di
+    mov dx, di        ; port = low 16 bits of RDI
     in al, dx
-    movzx rax, al
+    movzx rax, al     ; return result in RAX (System V ABI)
     ret

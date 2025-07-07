@@ -10,10 +10,10 @@ extern u64 read_cr2();
 extern u64 read_cr3();
 extern u64 read_cr4();
 
-extern u64 write_cr0();
-extern u64 write_cr2();
-extern u64 write_cr3();
-extern u64 write_cr4();
+extern void write_cr0(u64 value);
+extern void write_cr2(u64 value);
+extern void write_cr3(u64 value);
+extern void write_cr4(u64 value);
 
 extern void clear_interrupts();
 extern void set_interrupts();

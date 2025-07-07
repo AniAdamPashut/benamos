@@ -45,57 +45,6 @@ char *exception_messages[] = {
     "Reserved"
 };
 
-
-interrupt_descriptor_t create_interrupt_descriptor(u64 handler, u16 segment_selector, u8 ist) {
-    u8 attributes = 0x8F;
-    u16 offset_low = handler & 0xFFFF;
-    u16 offset_middle = (handler >> 16) & 0xFFFF;
-    u32 offset_high = (handler >> 32);
-    u16 options = (attributes << 8) | ist;
-
-    return (interrupt_descriptor_t) {
-        .offset_high = offset_high,
-        .offset_low = offset_low,
-        .offset_middle = offset_middle,
-        .options = options,
-        .segment_selector = segment_selector,
-        ._reserved = 0
-    };
-}
-
-static void* isr_handler_table[256] = { NULL };
-
-void isr_handler(struct registers *r)
-{
-	void (*handler)(struct registers* r);
-    handler = isr_handler_table[r->int_no];
-
-    if  (handler != NULL)
-    {
-        handler(r);
-        return;
-    }
-    printf("[ISRERR]\n");
-    printf("\x1b[90m%02x:%02x:%02x\x1b[0m \x1b[91mPANIC\x1b[0m \x1b[90m%s:%s:%u\x1b[0m ", rtc_get_hours(), rtc_get_minutes(), rtc_get_seconds(), __FILE__, __func__, __LINE__);
-    printf("%s [%lu]\n", exception_messages[r->int_no], r->error);
-
-    printf("Faulting Address (RIP) = 0x%016lX\n", r->rip);
-    printf("R15 = 0x%016lX R14 = 0x%016lX\n", r->r15, r->r14);
-    printf("R13 = 0x%016lX R12 = 0x%016lX\n", r->r13, r->r12);
-    printf("R11 = 0x%016lX R10 = 0x%016lX\n", r->r11, r->r10);
-    printf("R9  = 0x%016lX R8  = 0x%016lX\n", r->r9 , r->r8 );
-    printf("RBP = 0x%016lX RSP = 0x%016lX\n", r->rbp, r->rsp);
-    printf("RSI = 0x%016lX RDI = 0x%016lX\n", r->rsi, r->rdi);
-    printf("RDX = 0x%016lX RCX = 0x%016lX\n", r->rdx, r->rcx);
-    printf("RBX = 0x%016lX RAX = 0x%016lX\n", r->rbx, r->rax);
-    printf("CS  = 0x%016lX SS  = 0x%016lX\n", r->cs , r->ss );
-    printf("CR4 = 0x%016lX CR3 = 0x%016lX\n", read_cr4(), read_cr3());
-    printf("CR2 = 0x%016lX CR0 = 0x%016lX\n", read_cr2(), read_cr0());
-    printf("RFLAGS = 0x%016lX\n", r->rflags);
-
-    hcf();
-}
-
 extern void isr0();
 extern void isr1();
 extern void isr2();
@@ -129,6 +78,58 @@ extern void isr29();
 extern void isr30();
 extern void isr31();
 extern void isr128();
+extern void load_idt();
+
+static void* isr_handler_table[256] = { NULL };
+
+interrupt_descriptor_t create_interrupt_descriptor(u64 handler, u16 segment_selector, u8 ist) {
+    u8 attributes = 0x8F;
+    u16 offset_low = handler & 0xFFFF;
+    u16 offset_middle = (handler >> 16) & 0xFFFF;
+    u32 offset_high = (handler >> 32);
+    u16 options = (attributes << 8) | ist;
+
+    return (interrupt_descriptor_t) {
+        .offset_high = offset_high,
+        .offset_low = offset_low,
+        .offset_middle = offset_middle,
+        .options = options,
+        .segment_selector = segment_selector,
+        ._reserved = 0
+    };
+}
+
+
+void isr_handler(struct registers *r)
+{
+	void (*handler)(struct registers* r);
+    handler = isr_handler_table[r->int_no];
+
+    if  (handler != NULL)
+    {
+        handler(r);
+        return;
+    }
+    printf("[ISRERR]\n");
+    printf("\x1b[90m%02x:%02x:%02x\x1b[0m \x1b[91mPANIC\x1b[0m \x1b[90m%s:%s:%u\x1b[0m ", rtc_get_hours(), rtc_get_minutes(), rtc_get_seconds(), __FILE__, __func__, __LINE__);
+    printf("%s [%lu]\n", exception_messages[r->int_no], r->error);
+
+    printf("Faulting Address (RIP) = 0x%016lX\n", r->rip);
+    printf("R15 = 0x%016lX R14 = 0x%016lX\n", r->r15, r->r14);
+    printf("R13 = 0x%016lX R12 = 0x%016lX\n", r->r13, r->r12);
+    printf("R11 = 0x%016lX R10 = 0x%016lX\n", r->r11, r->r10);
+    printf("R9  = 0x%016lX R8  = 0x%016lX\n", r->r9 , r->r8 );
+    printf("RBP = 0x%016lX RSP = 0x%016lX\n", r->rbp, r->rsp);
+    printf("RSI = 0x%016lX RDI = 0x%016lX\n", r->rsi, r->rdi);
+    printf("RDX = 0x%016lX RCX = 0x%016lX\n", r->rdx, r->rcx);
+    printf("RBX = 0x%016lX RAX = 0x%016lX\n", r->rbx, r->rax);
+    printf("CS  = 0x%016lX SS  = 0x%016lX\n", r->cs , r->ss );
+    printf("CR4 = 0x%016lX CR3 = 0x%016lX\n", read_cr4(), read_cr3());
+    printf("CR2 = 0x%016lX CR0 = 0x%016lX\n", read_cr2(), read_cr0());
+    printf("RFLAGS = 0x%016lX\n", r->rflags);
+
+    hcf();
+}
 
 
 void set_interrupts_in_table() {
@@ -174,8 +175,6 @@ void breakpoint(struct registers* r) {
 void load_custom_interrupts() {
     REGISTER_HANDLER(breakpoint, 0x03);
 }
-
-extern void load_idt();
 
 void initialize_idt() { 
     set_interrupts_in_table();

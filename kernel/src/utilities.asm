@@ -36,18 +36,22 @@ read_cr4:
 
 
 write_cr0:
+    mov rax, rdi
     mov cr0, rax
     ret
     
 write_cr2:
+    mov rax, rdi
     mov cr2, rax
     ret
 
 write_cr3:
+    mov rax, rdi
     mov cr3, rax
     ret
 
 write_cr4:
+    mov rax, rdi
     mov cr4, rax
     ret
 

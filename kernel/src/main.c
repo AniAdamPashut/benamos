@@ -25,6 +25,14 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
     .revision = 0
 };
 
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_memmap_request memmap_request = {
+    .id = LIMINE_MEMMAP_REQUEST,
+    .revision = 0
+};
+
+
 // Finally, define the start and end markers for the Limine requests.
 // These can also be moved anywhere, to any .c file, as seen fit.
 
@@ -120,6 +128,19 @@ void kmain(void) {
 
     // Fetch the first framebuffer.
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
+
+    struct limine_memmap_response *response = memmap_request.response;
+    struct limine_memmap_entry **entries = response->entries;
+
+    u64 amount_of_entries = response->entry_count;
+
+    printf("Amount of entries: %d\n", amount_of_entries);
+    for (u64 i = 0; i < amount_of_entries; i++) {
+        struct limine_memmap_entry *entry = entries[i];
+        
+        printf("base: 0x%x, type: %d, length: 0x%x\n", entry->base, entry->type, entry->length);
+    }
+
 
     uint32_t *pixels = (uint32_t *)fb->address;
     int width = fb->width;

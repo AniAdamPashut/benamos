@@ -13,7 +13,7 @@ PREFIX := /usr/local
 CC := cc
 
 # User controllable C flags.
-CFLAGS := -g -O2 -pipe
+CFLAGS := -g -O2 -pipe -Iinclude 
 
 # User controllable C preprocessor flags. We set none by default.
 CPPFLAGS :=
@@ -58,7 +58,6 @@ override CFLAGS += \
     -mno-mmx \
     -mno-red-zone \
     -mcmodel=kernel \
-    -Iinclude \
 
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \

@@ -1,6 +1,6 @@
 #include "cpu/gdt.h"
 #include "cpu/idt.h"
-#include "cpu/mm.h"
+#include "cpu/pmm.h"
 #include "com1.h"
 
 void init() {

@@ -1,5 +1,5 @@
 #include <limine.h>
-#include "cpu/mm.h"
+#include "cpu/pmm.h"
 #include "printf.h"
 #include "utilities.h"
 #include "mandatory.h"
@@ -9,43 +9,66 @@ extern void disable_paging();
 extern void enable_paging();
 
 #define KERNEL_VIRT_BASE  0xFFFFFFFF80000000ULL
-#define KERNEL_PHYS_BASE  0x100000ULL  // Physical load address of kernel (1 MiB)
 
-// __attribute__((used, section(".limine_requests")))
-// static volatile struct limine_memmap_request memmap_request = {
-//     .id = LIMINE_MEMMAP_REQUEST,
-//     .revision = 0
-// };
+static struct buddy_allocator allocator = {0};
 
-// static u8 *heap = (u8 *)NULL;
+void set_buddy_present_upwars_rec(usize order, u8 position, u64 runs) {
+    if (order < 0) {
+        return;
+    }
+    
+    struct buddy *runner = &allocator.buddies[order];
+    for (u64 i = 0; i < runs; i++)
+        runner = runner->next;
+    
+    runner->bitmap = runner->bitmap | (1 << position);
+    set_buddy_present_upwars_rec(order - 1, position * 2, runs * 2);
+}
 
-// void find_heap_address() {
-//     struct limine_memmap_response *response = memmap_request.response;
-//     struct limine_memmap_entry **entries = response->entries;
+void set_buddy_present_downwards_rec(usize order, u8 position, u64 runs) {
+    if (order < 0) {
+        return;
+    }
+    
+    struct buddy *runner = &allocator.buddies[order];
+    for (u64 i = 0; i < runs; i++)
+        runner = runner->next;
+    
+    runner->bitmap = runner->bitmap | (1 << position);
+    set_buddy_present_downwards_rec(order + 1, position / 2, runs / 2);
+}
 
-//     u64 amount_of_entries = response->entry_count;
+u64 convert_position_to_addr(usize order, u8 position, u64 runs) {
+    return (order * BASE_REVISION) * position * runs;
+}
 
-//     for (u64 i = 0; i < amount_of_entries; i++) {
-//         struct limine_memmap_entry *entry = entries[i];
-        
-//         if (entry->type != LIMINE_MEMMAP_USABLE)
-//             continue;
-        
-//         if (entry->length < 0x5000)
-//             continue;
+void *alloc_page(usize size) {
+    usize minimal_buddy_order = (size - 1) / BASE_REVISION;
 
-//         heap = (u8 *)entry->base;
-//         break;
-//     }
+    if (minimal_buddy_order > BUDDY_COUNT) {
+        printf("Large memory requested: 0x%x. cannot fullfil request", size);
+        return NULL;
+    }
+    
+    struct buddy *runner = &allocator.buddies[minimal_buddy_order];
+    u64 runs = 0;
 
-// }
+    while (runner != NULL) {
+        for (u8 i = 0; i < BITMAP_SIZE; i++) {
+            if (!((runner->bitmap >> i) & 0x1)) {
+                set_buddy_present_upwars_rec(minimal_buddy_order, i, runs);
+                set_buddy_present_downwards_rec(minimal_buddy_order, i, runs);
+                return (void *)convert_position_to_addr(minimal_buddy_order, i, runs);
+            }
+        }
 
-// void *alloc_page() {
-//     void *page = heap;
-//     heap += PAGE_SIZE;
-//     memset(page, 0, PAGE_SIZE);
-//     return page;
-// }
+        runner = runner->next;
+        runs++;
+    }
+
+    printf("Out of memory in kernel. NOT GOOD!!!");
+    return NULL;
+}
 
 // void map_page(u64 *pml4, u64 vaddr, u64 paddr, u64 flags) {
 //     usize pml4_idx = (vaddr >> 39) & 0x1FF;
